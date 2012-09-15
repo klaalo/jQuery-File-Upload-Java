@@ -146,7 +146,14 @@ public class UploadServlet extends HttpServlet {
         response.setContentType("application/json");
         JSONArray json = new JSONArray();
         try {
+            //
+            // this list is for file items
             List<FileItem> items = uploadHandler.parseRequest(request);
+            //
+            // this map will contains other parameters from form input fields or formData option
+            // see documentation : https://github.com/blueimp/jQuery-File-Upload/wiki/How-to-submit-additional-Form-Data
+	    Map<String, String> otherParameters = new HashMap<String, String>();
+	    //
             for (FileItem item : items) {
                 if (!item.isFormField()) {
                         File file = new File(fileUploadPath, item.getName());
@@ -159,6 +166,12 @@ public class UploadServlet extends HttpServlet {
                         jsono.put("delete_url", "upload?delfile=" + item.getName());
                         jsono.put("delete_type", "GET");
                         json.put(jsono);
+                }
+                else {
+			//
+			// these are the other form fields or elements of formData option
+			otherParameters.put(item.getFieldName(), item.getString());
+
                 }
             }
         } catch (FileUploadException e) {
