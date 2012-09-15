@@ -3,6 +3,8 @@ package info.sudr.file;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import javax.imageio.ImageIO;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
