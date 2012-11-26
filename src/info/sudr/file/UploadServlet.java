@@ -3,6 +3,8 @@ package info.sudr.file;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 import javax.imageio.ImageIO;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -25,7 +27,9 @@ public class UploadServlet extends HttpServlet {
 
     @Override
     public void init(ServletConfig config) {
-        fileUploadPath = new File(config.getInitParameter("upload_path"));
+    	//
+		// I fixed the uploadpath with the right realPath
+		fileUploadPath = new File(config.getServletContext().getRealPath(config.getInitParameter("upload_path")));
     }
         
     /**
@@ -93,8 +97,37 @@ public class UploadServlet extends HttpServlet {
                     }
             } // TODO: check and report success
         } else {
-            PrintWriter writer = response.getWriter();
-            writer.write("call POST with multipart form data");
+    		//
+			// return the list of all files in the upload folder
+			PrintWriter writer = response.getWriter();
+			response.setContentType("application/json");
+			JSONArray json = new JSONArray();
+
+			try {
+				//
+				// loop all files in the folder
+				File[] fileList = fileUploadPath.listFiles();
+				if (fileList != null) {
+					for (File f : fileList) {
+						if (f.isFile()) {
+							JSONObject jsono = new JSONObject();
+							jsono.put("name", f.getName());
+							jsono.put("size", f.length());
+							jsono.put("url", "upload?getfile=" + f.getName());
+							jsono.put("thumbnail_url", "upload?getthumb=" + f.getName());
+							jsono.put("delete_url", "upload?delfile=" + f.getName());
+							jsono.put("delete_type", "GET");
+							json.put(jsono);
+
+						}
+					}
+				}
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			} finally {
+				writer.write(json.toString());
+				writer.close();
+			}
         }
     }
     
@@ -115,7 +148,14 @@ public class UploadServlet extends HttpServlet {
         response.setContentType("application/json");
         JSONArray json = new JSONArray();
         try {
+            //
+            // this list is for file items
             List<FileItem> items = uploadHandler.parseRequest(request);
+            //
+            // this map will contains other parameters from form input fields or formData option
+            // see documentation : https://github.com/blueimp/jQuery-File-Upload/wiki/How-to-submit-additional-Form-Data
+	    Map<String, String> otherParameters = new HashMap<String, String>();
+	    //
             for (FileItem item : items) {
                 if (!item.isFormField()) {
                         File file = new File(fileUploadPath, item.getName());
@@ -128,6 +168,12 @@ public class UploadServlet extends HttpServlet {
                         jsono.put("delete_url", "upload?delfile=" + item.getName());
                         jsono.put("delete_type", "GET");
                         json.put(jsono);
+                }
+                else {
+			//
+			// these are the other form fields or elements of formData option
+			otherParameters.put(item.getFieldName(), item.getString());
+
                 }
             }
         } catch (FileUploadException e) {
